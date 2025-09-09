@@ -1,0 +1,42 @@
+{
+  "name": "nuxt-app",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@heroicons/vue": "^2.2.0",
+    "@nuxtjs/axios": "^5.13.6",
+    "@nuxtjs/color-mode": "^3.5.2",
+    "@nuxtjs/device": "^3.2.4",
+    "@nuxtjs/google-fonts": "^3.2.0",
+    "@nuxtjs/i18n": "^10.0.6",
+    "@nuxtjs/icon": "^3.0.0-beta.16",
+    "@nuxtjs/robots": "^5.5.1",
+    "@nuxtjs/sitemap": "^7.4.3",
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "@pinia/nuxt": "^0.11.2",
+    "@sidebase/nuxt-auth": "^1.0.2",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/mongoose": "^5.11.96",
+    "@vueuse/core": "^13.9.0",
+    "@vueuse/nuxt": "^13.9.0",
+    "bcryptjs": "^3.0.2",
+    "chart.js": "^4.5.0",
+    "dotenv": "^17.2.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.0",
+    "nuxt": "^4.1.1",
+    "nuxt-security": "^2.4.0",
+    "openai": "^5.19.1",
+    "vue": "^3.5.21",
+    "vue-chartjs": "^5.3.2",
+    "vue-router": "^4.5.1"
+  }
+}
