@@ -8,7 +8,7 @@
       ]"
     >
       <div class="flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200">
-        <h1 class="text-xl font-bold text-gradient">CRM Leads AI</h1>
+        <h1 class="text-xl font-bold text-gradient">{{ getCompanyName() }}</h1>
         <button
           @click="toggleSidebar"
           class="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 lg:hidden"
@@ -284,6 +284,9 @@
 const { $auth } = useNuxtApp()
 const router = useRouter()
 
+// Use settings composable
+const { getCompanyName } = useSettings()
+
 // Reactive state
 const sidebarOpen = ref(true) // Open by default on desktop
 const userMenuOpen = ref(false)
@@ -301,6 +304,10 @@ const navigation = [
   { name: 'Leads', href: '/leads', icon: 'heroicons:users', category: 'leads' },
   { name: 'New Lead', href: '/leads/new', icon: 'heroicons:plus-circle', category: 'leads' },
   
+  // Email Management
+  { name: 'Emails', href: '/emails', icon: 'heroicons:envelope', category: 'leads' },
+  { name: 'Email Templates', href: '/email-templates', icon: 'heroicons:document-text', category: 'leads' },
+  
   // Analytics & Insights
   { name: 'Analytics', href: '/analytics', icon: 'heroicons:chart-bar', category: 'analytics' },
   { name: 'AI Insights', href: '/ai-insights', icon: 'heroicons:sparkles', category: 'analytics' },
@@ -308,6 +315,9 @@ const navigation = [
   // Management
   { name: 'Activities', href: '/activities', icon: 'heroicons:clock', category: 'management' },
   { name: 'Users', href: '/users', icon: 'heroicons:user-group', category: 'management' },
+  { name: 'Permissions', href: '/permissions', icon: 'heroicons:shield-check', category: 'management' },
+  { name: 'Assignment Rules', href: '/assignment-rules', icon: 'heroicons:cog-6-tooth', category: 'management' },
+  { name: 'Assignments', href: '/assignments', icon: 'heroicons:users', category: 'management' },
   
   // Settings
   { name: 'Settings', href: '/settings', icon: 'heroicons:cog-6-tooth', category: 'settings' },
@@ -327,10 +337,15 @@ const pageDescription = computed(() => {
     '/': 'Overview of your CRM performance and key metrics',
     '/leads': 'Manage and track all your leads',
     '/leads/new': 'Create a new lead in your CRM system',
+    '/emails': 'Manage your email communications and drafts',
+    '/email-templates': 'Create and manage email templates',
     '/analytics': 'View detailed analytics and performance metrics',
     '/ai-insights': 'AI-powered insights and recommendations',
     '/activities': 'Track and manage all activities',
     '/users': 'Manage team members and user permissions',
+    '/permissions': 'View and manage role-based access control',
+    '/assignment-rules': 'Configure automatic lead assignment rules',
+    '/assignments': 'Track and manage lead assignments',
     '/settings': 'Configure system settings and preferences',
     '/profile': 'Manage your account information and preferences'
   }

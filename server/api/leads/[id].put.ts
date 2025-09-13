@@ -58,11 +58,35 @@ export default defineEventHandler(async (event) => {
     }
 
     if (body.email && body.email !== lead.email) {
+      // Check if another lead with this email already exists (excluding current lead)
+      const existingLead = await Lead.findOne({ 
+        email: body.email, 
+        _id: { $ne: leadId } 
+      })
+      if (existingLead) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Lead with this email already exists'
+        })
+      }
       changes.push(`Email changed from "${lead.email}" to "${body.email}"`)
       lead.email = body.email
     }
 
     if (body.phone !== undefined && body.phone !== lead.phone) {
+      // Check if another lead with this phone already exists (excluding current lead)
+      if (body.phone) {
+        const existingLead = await Lead.findOne({ 
+          phone: body.phone, 
+          _id: { $ne: leadId } 
+        })
+        if (existingLead) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Lead with this phone number already exists'
+          })
+        }
+      }
       changes.push(`Phone changed from "${lead.phone || 'N/A'}" to "${body.phone || 'N/A'}"`)
       lead.phone = body.phone
     }

@@ -1,3 +1,6 @@
+/* Import SweetAlert2 custom styles */
+@import './sweetalert.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

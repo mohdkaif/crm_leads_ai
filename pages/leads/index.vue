@@ -7,7 +7,19 @@
           <h1 class="page-title">Leads Management</h1>
           <p class="page-subtitle">Manage and track all your leads with AI-powered insights</p>
         </div>
-        <div class="flex items-center space-x-3">
+        <div>
+          <NuxtLink to="/leads/new" class="btn btn-primary">
+            <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
+            Add Lead
+          </NuxtLink>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons Row -->
+    <div class="card mb-6">
+      <div class="card-body">
+        <div class="flex flex-wrap items-center gap-3">
           <button
             @click="exportLeads"
             class="btn btn-outline"
@@ -19,6 +31,7 @@
           <button
             @click="showFilters = !showFilters"
             class="btn btn-outline"
+            :class="{ 'bg-blue-50 text-blue-700': showFilters }"
           >
             <Icon name="heroicons:funnel" class="w-4 h-4 mr-2" />
             Filters
@@ -31,10 +44,30 @@
             <Icon name="heroicons:sparkles" class="w-4 h-4 mr-2" />
             AI Follow-ups
           </button>
-          <NuxtLink to="/leads/new" class="btn btn-primary">
-            <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
-            Add Lead
-          </NuxtLink>
+          <button
+            @click="openEmailComposer"
+            class="btn btn-outline"
+            :disabled="selectedLeads.length === 0"
+          >
+            <Icon name="heroicons:envelope" class="w-4 h-4 mr-2" />
+            Send Email
+          </button>
+          <button
+            @click="openAssignmentModal"
+            class="btn btn-outline"
+            :disabled="selectedLeads.length === 0"
+          >
+            <Icon name="heroicons:user-plus" class="w-4 h-4 mr-2" />
+            Assign Leads
+          </button>
+          <button
+            @click="autoAssignSelectedLeads"
+            class="btn btn-outline"
+            :disabled="selectedLeads.length === 0"
+          >
+            <Icon name="heroicons:sparkles" class="w-4 h-4 mr-2" />
+            Auto Assign
+          </button>
         </div>
       </div>
     </div>
@@ -92,7 +125,7 @@
           </div>
           <div class="ml-4">
             <p class="stat-label">Total Value</p>
-            <p class="stat-value">${{ stats.totalValue.toLocaleString() }}</p>
+            <p class="stat-value">{{ formatCurrency(stats.totalValue) }}</p>
           </div>
         </div>
       </div>
@@ -175,7 +208,21 @@
     </div>
 
     <!-- Filters -->
-    <div v-if="showFilters" class="card mb-6">
+    <div v-if="showFilters" class="card mb-6 border-blue-200 bg-blue-50">
+      <div class="card-header bg-blue-100">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <Icon name="heroicons:funnel" class="w-5 h-5 text-blue-600 mr-2" />
+            <h3 class="text-lg font-semibold text-blue-900">Filter Leads</h3>
+          </div>
+          <button 
+            @click="showFilters = false" 
+            class="text-blue-600 hover:text-blue-800"
+          >
+            <Icon name="heroicons:x-mark" class="w-5 h-5" />
+          </button>
+        </div>
+      </div>
       <div class="card-body">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div>
@@ -228,10 +275,15 @@
         <div class="flex justify-between items-center">
           <div class="flex space-x-2">
             <button @click="clearFilters" class="btn btn-outline btn-sm">
+              <Icon name="heroicons:x-mark" class="w-4 h-4 mr-1" />
               Clear Filters
             </button>
+            <button @click="applyFilters" class="btn btn-primary btn-sm">
+              <Icon name="heroicons:check" class="w-4 h-4 mr-1" />
+              Apply Filters
+            </button>
           </div>
-          <div class="text-sm text-gray-500">
+          <div class="text-sm text-blue-700 font-medium">
             {{ filteredLeads.length }} of {{ leads.length }} leads
           </div>
         </div>
@@ -242,8 +294,13 @@
     <div class="card">
       <div class="card-header">
         <div class="flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-900">All Leads</h3>
+          <div class="flex items-center">
+            <Icon name="heroicons:users" class="w-5 h-5 text-gray-600 mr-2" />
+            <h3 class="text-lg font-semibold text-gray-900">All Leads</h3>
+            <span class="ml-2 text-sm text-gray-500">({{ filteredLeads.length }} total)</span>
+          </div>
           <div class="flex items-center space-x-2">
+            <label class="text-sm text-gray-600 mr-2">Show:</label>
             <select v-model="itemsPerPage" class="form-input" style="width: auto;" @change="applyFilters">
               <option value="10">10 per page</option>
               <option value="25">25 per page</option>
@@ -401,9 +458,8 @@
                 </td>
                 <td class="table-cell">
                   <div class="text-sm text-gray-900">
-                    {{ lead.value ? `$${formatNumber(lead.value)}` : 'N/A' }}
+                    {{ lead.value ? formatCurrency(lead.value, lead.currency) : 'N/A' }}
                   </div>
-                  <div class="text-sm text-gray-500">{{ lead.currency }}</div>
                 </td>
                 <td class="table-cell">
                   <div v-if="lead.nextFollowUpDate" class="text-sm">
@@ -434,7 +490,7 @@
                 </td>
                 <td class="table-cell">
                   <div class="text-sm text-gray-900">{{ formatDate(lead.createdAt) }}</div>
-                  <div class="text-xs text-gray-500">{{ getTimeAgo(lead.createdAt) }}</div>
+                  <div class="text-xs text-gray-500">{{ getRelativeTime(lead.createdAt) }}</div>
                 </td>
                 <td class="table-cell-actions">
                   <div class="flex items-center space-x-1">
@@ -458,6 +514,13 @@
                       title="Schedule Follow-up"
                     >
                       <Icon name="heroicons:clock" class="w-4 h-4" />
+                    </button>
+                    <button 
+                      @click="sendEmailToLead(lead._id)"
+                      class="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                      title="Send Email"
+                    >
+                      <Icon name="heroicons:envelope" class="w-4 h-4" />
                     </button>
                     <button 
                       @click="deleteLead(lead._id)"
@@ -557,15 +620,98 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Email Composer -->
+    <EmailComposer 
+      :show="showEmailComposer" 
+      :lead-id="selectedLeadId"
+      @close="closeEmailComposer"
+      @sent="handleEmailSent"
+    />
+
+    <!-- Assignment Modal -->
+    <Teleport to="body">
+      <div v-if="showAssignmentModal" class="assignment-modal">
+        <div class="modal-overlay" @click="closeAssignmentModal"></div>
+        <div class="modal-container max-w-md" @click.stop>
+          <div class="modal-content">
+            <div class="card-header">
+              <h3 class="text-lg font-semibold text-gray-900">Assign Leads</h3>
+              <button @click="closeAssignmentModal" class="text-gray-400 hover:text-gray-600">
+                <Icon name="heroicons:x-mark" class="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div class="card-body">
+              <div class="mb-4">
+                <p class="text-sm text-gray-600 mb-2">
+                  Assigning <strong>{{ selectedLeads.length }}</strong> selected leads
+                </p>
+              </div>
+              
+              <div class="mb-4">
+                <label class="form-label">Assign to User *</label>
+                <select v-model="assignmentForm.userId" class="form-input" required>
+                  <option value="">Select user</option>
+                  <option v-for="user in users" :key="user._id" :value="user._id">
+                    {{ user.firstName }} {{ user.lastName }} ({{ user.role }})
+                  </option>
+                </select>
+              </div>
+              
+              <div class="mb-4">
+                <label class="form-label">Assignment Notes</label>
+                <textarea 
+                  v-model="assignmentForm.notes" 
+                  class="form-input" 
+                  rows="3"
+                  placeholder="Enter assignment notes (optional)"
+                ></textarea>
+              </div>
+            </div>
+            
+            <div class="card-footer">
+              <div class="flex justify-end space-x-2">
+                <button @click="closeAssignmentModal" class="btn btn-outline">Cancel</button>
+                <button @click="assignSelectedLeads" class="btn btn-primary">
+                  Assign Leads
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
+// Use settings composable
+const { 
+  formatCurrency, 
+  formatDate, 
+  formatDateTime, 
+  getRelativeTime, 
+  getCompanyName,
+  shouldNotify 
+} = useSettings()
+
+// Use auth composable
+const { fetchUser } = useAuth()
+
 // Reactive data
 const loading = ref(true)
 const showFilters = ref(false)
 const showAIFollowUps = ref(false)
 const showFollowUpModal = ref(false)
+const showEmailComposer = ref(false)
+const showAssignmentModal = ref(false)
+const selectedLeadId = ref('')
+const users = ref([])
+const assignmentForm = ref({
+  userId: '',
+  notes: ''
+})
 const leads = ref([])
 const selectedLeads = ref([])
 const currentPage = ref(1)
@@ -689,25 +835,6 @@ const totalPages = computed(() => {
 })
 
 // Methods
-const formatNumber = (num) => {
-  return new Intl.NumberFormat().format(num)
-}
-
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString()
-}
-
-const getTimeAgo = (date) => {
-  const now = new Date()
-  const diff = now - new Date(date)
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  
-  if (days === 0) return 'Today'
-  if (days === 1) return 'Yesterday'
-  if (days < 7) return `${days} days ago`
-  if (days < 30) return `${Math.floor(days / 7)} weeks ago`
-  return `${Math.floor(days / 30)} months ago`
-}
 
 const getTimeUntilFollowUp = (date) => {
   const now = new Date()
@@ -903,13 +1030,14 @@ const saveFollowUp = async () => {
     console.log('Scheduling follow-up with data:', followUpData.value)
     
     // Validate required fields
+    const { warning: showWarning } = useAlert()
     if (!followUpData.value.leadId) {
-      alert('Error: Lead ID is missing')
+      await showWarning('Validation Error', 'Lead ID is missing')
       return
     }
     
     if (!followUpData.value.date) {
-      alert('Error: Please select a follow-up date')
+      await showWarning('Validation Error', 'Please select a follow-up date')
       return
     }
     
@@ -925,7 +1053,8 @@ const saveFollowUp = async () => {
     }
     
     if (!token.value) {
-      alert('Error: Authentication required. Please login again.')
+      const { error: showError } = useAlert()
+      await showError('Authentication Required', 'Please login again.')
       return
     }
     
@@ -952,7 +1081,8 @@ const saveFollowUp = async () => {
       }
       // Reload leads to get updated data
       await loadLeads()
-      alert('Follow-up scheduled successfully!')
+      const { success } = useAlert()
+      await success('Follow-up scheduled successfully!')
     }
   } catch (error) {
     console.error('Error scheduling follow-up:', error)
@@ -962,7 +1092,8 @@ const saveFollowUp = async () => {
       data: error.data,
       message: error.message
     })
-    alert(`Error scheduling follow-up: ${error.data?.message || error.message || 'Unknown error'}`)
+    const { error: showError } = useAlert()
+    await showError('Error scheduling follow-up', error.data?.message || error.message || 'Unknown error')
   }
 }
 
@@ -976,7 +1107,7 @@ const closeFollowUpModal = () => {
   }
 }
 
-const viewLead = (leadId) => {
+const viewLead = async (leadId) => {
   // For now, show lead details in a modal or alert
   const lead = leads.value.find(l => l._id === leadId)
   if (lead) {
@@ -995,7 +1126,8 @@ Created: ${formatDate(lead.createdAt)}
 Next Follow-up: ${lead.nextFollowUpDate ? formatDate(lead.nextFollowUpDate) : 'Not scheduled'}
 AI Score: ${lead.aiScore || 'Not analyzed'}
     `.trim()
-    alert(details)
+    const { info } = useAlert()
+    await info('Lead Details', details)
   }
 }
 
@@ -1008,7 +1140,9 @@ const editLead = (leadId) => {
 }
 
 const deleteLead = async (leadId) => {
-  if (confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
+  const { confirm } = useAlert()
+  const result = await confirm('Delete Lead', 'Are you sure you want to delete this lead? This action cannot be undone.', 'Yes, Delete', 'Cancel')
+  if (result.isConfirmed) {
     try {
       const token = useCookie('auth-token')
       const response = await $fetch(`/api/leads/${leadId}`, {
@@ -1019,11 +1153,13 @@ const deleteLead = async (leadId) => {
       if (response.success) {
         leads.value = leads.value.filter(lead => lead._id !== leadId)
         updateStats()
-        alert('Lead deleted successfully')
+        const { success } = useAlert()
+        await success('Lead deleted successfully')
       }
     } catch (error) {
       console.error('Error deleting lead:', error)
-      alert('Error deleting lead. Please try again.')
+      const { error: showError } = useAlert()
+      await showError('Error deleting lead', 'Please try again.')
     }
   }
 }
@@ -1047,11 +1183,13 @@ const analyzeLead = async (leadId) => {
         lead.urgency = response.data.urgency
         lead.aiInsights = response.data.insights
       }
-      alert('Lead analysis completed successfully!')
+      const { success } = useAlert()
+      await success('Lead analysis completed successfully!')
     }
   } catch (error) {
     console.error('Error analyzing lead:', error)
-    alert('Error analyzing lead. Please try again.')
+    const { error: showError } = useAlert()
+    await showError('Error analyzing lead', 'Please try again.')
   }
 }
 
@@ -1062,7 +1200,8 @@ const exportLeads = async () => {
       : leads.value
 
     if (leadsToExport.length === 0) {
-      alert('No leads to export')
+      const { warning } = useAlert()
+      await warning('No leads to export')
       return
     }
 
@@ -1103,16 +1242,19 @@ const exportLeads = async () => {
     link.click()
     document.body.removeChild(link)
 
-    alert(`Successfully exported ${leadsToExport.length} leads`)
+    const { success } = useAlert()
+    await success(`Successfully exported ${leadsToExport.length} leads`)
   } catch (error) {
     console.error('Error exporting leads:', error)
-    alert('Error exporting leads. Please try again.')
+    const { error: showError } = useAlert()
+    await showError('Error exporting leads', 'Please try again.')
   }
 }
 
 const bulkUpdateStatus = async () => {
   if (selectedLeads.value.length === 0) {
-    alert('Please select leads to update')
+    const { warning } = useAlert()
+    await warning('Please select leads to update')
     return
   }
 
@@ -1121,7 +1263,8 @@ const bulkUpdateStatus = async () => {
 
   const validStatuses = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'closed_won', 'closed_lost']
   if (!validStatuses.includes(newStatus)) {
-    alert('Invalid status. Please enter a valid status.')
+    const { warning } = useAlert()
+    await warning('Invalid status', 'Please enter a valid status.')
     return
   }
 
@@ -1145,16 +1288,19 @@ const bulkUpdateStatus = async () => {
     
     updateStats()
     clearSelection()
-    alert(`Successfully updated ${selectedLeads.value.length} leads to ${newStatus}`)
+    const { success } = useAlert()
+    await success(`Successfully updated ${selectedLeads.value.length} leads to ${newStatus}`)
   } catch (error) {
     console.error('Error updating lead statuses:', error)
-    alert('Error updating lead statuses. Please try again.')
+    const { error: showError } = useAlert()
+    await showError('Error updating lead statuses', 'Please try again.')
   }
 }
 
 const bulkAssign = async () => {
   if (selectedLeads.value.length === 0) {
-    alert('Please select leads to assign')
+    const { warning } = useAlert()
+    await warning('Please select leads to assign')
     return
   }
 
@@ -1173,17 +1319,20 @@ const bulkAssign = async () => {
 
     await Promise.all(promises)
     clearSelection()
-    alert(`Successfully assigned ${selectedLeads.value.length} leads to ${assignTo}`)
+    const { success } = useAlert()
+    await success(`Successfully assigned ${selectedLeads.value.length} leads to ${assignTo}`)
     await loadLeads() // Reload to get updated assignments
   } catch (error) {
     console.error('Error assigning leads:', error)
-    alert('Error assigning leads. Please try again.')
+    const { error: showError } = useAlert()
+    await showError('Error assigning leads', 'Please try again.')
   }
 }
 
-const bulkScheduleFollowUp = () => {
+const bulkScheduleFollowUp = async () => {
   if (selectedLeads.value.length === 0) {
-    alert('Please select leads to schedule follow-up')
+    const { warning } = useAlert()
+    await warning('Please select leads to schedule follow-up')
     return
   }
 
@@ -1207,6 +1356,153 @@ const dismissSuggestion = (suggestionId) => {
   aiFollowUpSuggestions.value = aiFollowUpSuggestions.value.filter(s => s.id !== suggestionId)
 }
 
+// Email methods
+const openEmailComposer = () => {
+  if (selectedLeads.value.length === 1) {
+    selectedLeadId.value = selectedLeads.value[0]
+  } else {
+    selectedLeadId.value = ''
+  }
+  showEmailComposer.value = true
+}
+
+const sendEmailToLead = (leadId) => {
+  selectedLeadId.value = leadId
+  showEmailComposer.value = true
+}
+
+const closeEmailComposer = () => {
+  showEmailComposer.value = false
+  selectedLeadId.value = ''
+}
+
+const handleEmailSent = (data) => {
+  console.log('Email sent:', data)
+  // Refresh leads to show updated last contact date
+  loadLeads()
+}
+
+// Assignment methods
+const loadUsers = async () => {
+  try {
+    const { fetchUser } = useAuth()
+    const currentUser = await fetchUser()
+    
+    if (!currentUser) {
+      throw new Error('Authentication required')
+    }
+
+    const response = await $fetch('/api/users')
+
+    if (response.success) {
+      users.value = response.data.users.filter(user => 
+        ['sales', 'manager'].includes(user.role)
+      )
+      console.log('Loaded users:', users.value.length, users.value)
+    } else {
+      console.error('Failed to load users:', response)
+      throw new Error('Failed to load users')
+    }
+  } catch (err) {
+    console.error('Error loading users:', err)
+    const { error: showError } = useAlert()
+    await showError('Failed to load users', 'Please try again.')
+  }
+}
+
+const openAssignmentModal = () => {
+  assignmentForm.value = {
+    userId: '',
+    notes: ''
+  }
+  showAssignmentModal.value = true
+}
+
+const closeAssignmentModal = () => {
+  showAssignmentModal.value = false
+  assignmentForm.value = {
+    userId: '',
+    notes: ''
+  }
+}
+
+const assignSelectedLeads = async () => {
+  if (!assignmentForm.value.userId) {
+    const { warning } = useAlert()
+    await warning('Please select a user to assign leads to')
+    return
+  }
+
+  try {
+    const token = useCookie('auth-token')
+    let authToken = token.value
+    if (!authToken && process.client) {
+      authToken = localStorage.getItem('auth-token')
+    }
+    if (!authToken) {
+      throw new Error('Authentication required')
+    }
+
+    // Assign each selected lead
+    for (const leadId of selectedLeads.value) {
+      await $fetch('/api/assignments/manual-assign', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: {
+          leadId,
+          userId: assignmentForm.value.userId,
+          notes: assignmentForm.value.notes
+        }
+      })
+    }
+
+    closeAssignmentModal()
+    selectedLeads.value = []
+    loadLeads()
+    const { success } = useAlert()
+    await success('Leads assigned successfully!')
+  } catch (err) {
+    console.error('Error assigning leads:', err)
+    const { error: showError } = useAlert()
+    await showError('Failed to assign leads', err.data?.message || err.message || 'Please try again')
+  }
+}
+
+const autoAssignSelectedLeads = async () => {
+  try {
+    const token = useCookie('auth-token')
+    let authToken = token.value
+    if (!authToken && process.client) {
+      authToken = localStorage.getItem('auth-token')
+    }
+    if (!authToken) {
+      throw new Error('Authentication required')
+    }
+
+    // Auto assign each selected lead
+    for (const leadId of selectedLeads.value) {
+      await $fetch('/api/assignments/auto-assign', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: { leadId }
+      })
+    }
+
+    selectedLeads.value = []
+    loadLeads()
+    const { success } = useAlert()
+    await success('Leads auto-assigned successfully!')
+  } catch (err) {
+    console.error('Error auto-assigning leads:', err)
+    const { error: showError } = useAlert()
+    await showError('Failed to auto-assign leads', err.data?.message || err.message || 'Please try again')
+  }
+}
+
 // Debounced search
 const debouncedSearch = debounce(() => {
   applyFilters()
@@ -1228,6 +1524,7 @@ function debounce(func, wait) {
 // Lifecycle
 onMounted(() => {
   loadLeads()
+  loadUsers()
 })
 
 // Watch for filter changes
@@ -1248,3 +1545,121 @@ watch(itemsPerPage, () => {
   applyFilters()
 })
 </script>
+
+<style scoped>
+/* Modal Styles */
+.followup-modal,
+.assignment-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.modal-container {
+  position: relative;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-height: 90vh;
+  overflow-y: auto;
+  z-index: 10000;
+}
+
+.modal-content {
+  position: relative;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+.card-footer {
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.25rem;
+}
+
+.form-input {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-primary {
+  color: white;
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+.btn-outline {
+  color: #374151;
+  background-color: white;
+  border-color: #d1d5db;
+}
+
+.btn-outline:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+</style>

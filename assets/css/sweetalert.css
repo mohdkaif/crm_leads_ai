@@ -1,0 +1,162 @@
+/* SweetAlert2 Custom Styles */
+.swal2-popup {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  z-index: 9999999 !important;
+}
+
+.swal2-container {
+  z-index: 9999999 !important;
+}
+
+.swal2-backdrop {
+  z-index: 9999998 !important;
+}
+
+/* Ensure SweetAlert always appears on top of everything */
+.swal2-container.swal2-backdrop-show {
+  z-index: 9999999 !important;
+}
+
+.swal2-container.swal2-backdrop-show .swal2-popup {
+  z-index: 10000000 !important;
+}
+
+/* Override any conflicting z-index values */
+body.swal2-shown {
+  overflow: hidden !important;
+}
+
+body.swal2-shown .swal2-container {
+  z-index: 9999999 !important;
+}
+
+.swal2-title {
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.swal2-html-container {
+  font-size: 0.875rem !important;
+  color: #6b7280 !important;
+  line-height: 1.5 !important;
+}
+
+.swal2-confirm {
+  background-color: #10b981 !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+  padding: 0.75rem 1.5rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.swal2-confirm:hover {
+  background-color: #059669 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
+}
+
+.swal2-cancel {
+  background-color: #6b7280 !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+  padding: 0.75rem 1.5rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.swal2-cancel:hover {
+  background-color: #4b5563 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4) !important;
+}
+
+.swal2-actions {
+  gap: 0.75rem !important;
+  margin-top: 1.5rem !important;
+}
+
+.swal2-timer-progress-bar {
+  background-color: #10b981 !important;
+}
+
+/* Success alerts */
+.swal2-icon.swal2-success {
+  border-color: #10b981 !important;
+  color: #10b981 !important;
+}
+
+.swal2-icon.swal2-success .swal2-success-ring {
+  border-color: #10b981 !important;
+}
+
+.swal2-icon.swal2-success [class^=swal2-success-line] {
+  background-color: #10b981 !important;
+}
+
+/* Error alerts */
+.swal2-icon.swal2-error {
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+}
+
+.swal2-icon.swal2-error [class^=swal2-x-mark-line] {
+  background-color: #ef4444 !important;
+}
+
+/* Warning alerts */
+.swal2-icon.swal2-warning {
+  border-color: #f59e0b !important;
+  color: #f59e0b !important;
+}
+
+.swal2-icon.swal2-warning [class^=swal2-warning-line] {
+  background-color: #f59e0b !important;
+}
+
+/* Info alerts */
+.swal2-icon.swal2-info {
+  border-color: #3b82f6 !important;
+  color: #3b82f6 !important;
+}
+
+.swal2-icon.swal2-info [class^=swal2-info-line] {
+  background-color: #3b82f6 !important;
+}
+
+/* Question alerts */
+.swal2-icon.swal2-question {
+  border-color: #8b5cf6 !important;
+  color: #8b5cf6 !important;
+}
+
+.swal2-icon.swal2-question [class^=swal2-question-line] {
+  background-color: #8b5cf6 !important;
+}
+
+/* Loading spinner */
+.swal2-loader {
+  border-color: #10b981 transparent #10b981 transparent !important;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .swal2-popup {
+    background-color: #1f2937 !important;
+    color: #f9fafb !important;
+  }
+  
+  .swal2-title {
+    color: #f9fafb !important;
+  }
+  
+  .swal2-html-container {
+    color: #d1d5db !important;
+  }
+}

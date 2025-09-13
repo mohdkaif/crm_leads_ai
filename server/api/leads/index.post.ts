@@ -43,12 +43,23 @@ export default defineEventHandler(async (event) => {
     }
 
     // Check if lead with email already exists
-    const existingLead = await Lead.findOne({ email })
-    if (existingLead) {
+    const existingLeadByEmail = await Lead.findOne({ email })
+    if (existingLeadByEmail) {
       throw createError({
         statusCode: 409,
         statusMessage: 'Lead with this email already exists'
       })
+    }
+
+    // Check if lead with phone already exists (if phone is provided)
+    if (phone) {
+      const existingLeadByPhone = await Lead.findOne({ phone })
+      if (existingLeadByPhone) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Lead with this phone number already exists'
+        })
+      }
     }
 
     // Create new lead

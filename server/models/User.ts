@@ -7,7 +7,7 @@ export interface IUser extends Document {
   password: string
   firstName: string
   lastName: string
-  role: 'admin' | 'manager' | 'sales' | 'viewer' | 'user'
+  role: 'admin' | 'sales_manager' | 'account_manager' | 'sales_rep' | 'customer_success' | 'marketing' | 'support' | 'viewer'
   avatar?: string
   phone?: string
   department?: string
@@ -15,6 +15,41 @@ export interface IUser extends Document {
   status: 'active' | 'inactive'
   createdBy?: string
   lastLogin?: Date
+  settings?: {
+    general?: {
+      companyName: string
+      defaultCurrency: string
+      timeZone: string
+      dateFormat: string
+      language: string
+      theme: string
+    }
+    notifications?: {
+      email: boolean
+      leadAssignment: boolean
+      followUpReminders: boolean
+      statusChanges: boolean
+      weeklyReports: boolean
+      monthlyReports: boolean
+      systemUpdates: boolean
+      marketingEmails: boolean
+    }
+    security?: {
+      twoFactor: boolean
+    }
+    emailTemplates?: Array<{
+      id: string
+      name: string
+      description: string
+      category: string
+      isSystem: boolean
+      subject: string
+      html: string
+      variables: string[]
+      createdAt: Date
+      updatedAt: Date
+    }>
+  }
   createdAt: Date
   updatedAt: Date
   comparePassword(candidatePassword: string): Promise<boolean>
@@ -45,8 +80,8 @@ const UserSchema = new Schema<IUser>({
   },
   role: {
     type: String,
-    enum: ['admin', 'manager', 'sales', 'viewer', 'user'],
-    default: 'user'
+    enum: ['admin', 'sales_manager', 'account_manager', 'sales_rep', 'customer_success', 'marketing', 'support', 'viewer'],
+    default: 'viewer'
   },
   avatar: {
     type: String,
@@ -76,6 +111,29 @@ const UserSchema = new Schema<IUser>({
   lastLogin: {
     type: Date,
     default: null
+  },
+  settings: {
+    general: {
+      companyName: { type: String, default: 'CRM Leads AI' },
+      defaultCurrency: { type: String, default: 'USD' },
+      timeZone: { type: String, default: 'UTC' },
+      dateFormat: { type: String, default: 'MM/DD/YYYY' },
+      language: { type: String, default: 'en' },
+      theme: { type: String, default: 'light' }
+    },
+    notifications: {
+      email: { type: Boolean, default: true },
+      leadAssignment: { type: Boolean, default: true },
+      followUpReminders: { type: Boolean, default: true },
+      statusChanges: { type: Boolean, default: false },
+      weeklyReports: { type: Boolean, default: true },
+      monthlyReports: { type: Boolean, default: false },
+      systemUpdates: { type: Boolean, default: true },
+      marketingEmails: { type: Boolean, default: false }
+    },
+    security: {
+      twoFactor: { type: Boolean, default: false }
+    }
   }
 }, {
   timestamps: true

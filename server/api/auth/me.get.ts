@@ -1,35 +1,12 @@
-import connectDB from '../../utils/mongodb'
-import User from '../../models/User'
-
 export default defineEventHandler(async (event) => {
   try {
-    await connectDB()
+    // The auth middleware will have already verified the token and set event.context.user
+    const user = event.context.user
 
-    const token = getCookie(event, 'auth-token') || getHeader(event, 'authorization')?.replace('Bearer ', '')
-
-    if (!token) {
+    if (!user) {
       throw createError({
         statusCode: 401,
-        statusMessage: 'Access token required'
-      })
-    }
-
-    const { verifyToken } = await import('../../utils/jwt')
-    const payload = verifyToken(token)
-    
-    if (!payload) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid or expired token'
-      })
-    }
-
-
-    const user = await User.findById(payload.userId).select('-password')
-    if (!user || user.status !== 'active') {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'User not found or inactive'
+        statusMessage: 'User not found'
       })
     }
 
@@ -45,7 +22,8 @@ export default defineEventHandler(async (event) => {
         phone: user.phone,
         department: user.department,
         lastLogin: user.lastLogin,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        settings: user.settings
       }
     }
   } catch (error: any) {

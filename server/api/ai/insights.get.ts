@@ -1,200 +1,94 @@
 import connectDB from '../../utils/mongodb'
 import Lead from '../../models/Lead'
 import Activity from '../../models/Activity'
+import * as aiHelpers from '../../utils/ai-insights'
 
 export default defineEventHandler(async (event) => {
   try {
     await connectDB()
-    
-    // Get token from Authorization header
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+
+    const user = event.context.user
+    if (!user) {
       throw createError({
         statusCode: 401,
-        statusMessage: 'Access token required'
+        statusMessage: 'Authentication required'
       })
     }
-    
-    const token = authHeader.substring(7)
-    
-    // Verify JWT token
-    const jwt = await import('../../utils/jwt')
-    const decoded = jwt.verifyToken(token)
-    
-    if (!decoded) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid token'
-      })
-    }
-    
-    const userId = decoded.userId
+
+    // Get date range (default to last 30 days)
+    const query = getQuery(event)
+    const days = parseInt(query.days as string) || 30
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - days)
 
     // Get leads data
-    const leads = await Lead.find({ 
-      $or: [
-        { assignedTo: userId },
-        { createdBy: userId }
-      ]
-    })
-    const activities = await Activity.find({ 
-      $or: [
-        { createdBy: userId },
-        { assignedTo: userId }
-      ]
-    })
+    const leads = await Lead.find({
+      createdAt: { $gte: startDate }
+    }).lean()
 
-    // AI-powered insights
-    const insights = []
+    // Get activities data
+    const activities = await Activity.find({
+      createdAt: { $gte: startDate }
+    }).lean()
 
-    // Lead conversion insights
-    const convertedLeads = leads.filter(lead => lead.status === 'converted')
-    const conversionRate = leads.length > 0 ? (convertedLeads.length / leads.length) * 100 : 0
-    
-    if (conversionRate < 20) {
-      insights.push({
-        type: 'warning',
-        title: 'Low Conversion Rate',
-        message: `Your conversion rate is ${conversionRate.toFixed(1)}%. Consider improving your follow-up process.`,
-        action: 'Review follow-up strategies',
-        priority: 'high'
-      })
-    } else if (conversionRate > 40) {
-      insights.push({
-        type: 'success',
-        title: 'Excellent Conversion Rate',
-        message: `Your conversion rate is ${conversionRate.toFixed(1)}%. Keep up the great work!`,
-        action: 'Continue current strategies',
-        priority: 'low'
-      })
-    }
+    // Calculate AI insights
+    const insights = {
+      // Lead Performance Metrics
+      leadMetrics: {
+        totalLeads: leads.length,
+        newLeads: leads.filter(lead => lead.status === 'new').length,
+        qualifiedLeads: leads.filter(lead => lead.status === 'qualified').length,
+        convertedLeads: leads.filter(lead => lead.status === 'closed_won').length,
+        conversionRate: leads.length > 0 ? 
+          (leads.filter(lead => lead.status === 'closed_won').length / leads.length * 100).toFixed(1) : 0,
+        averageLeadValue: leads.length > 0 ? 
+          leads.reduce((sum, lead) => sum + (lead.value || 0), 0) / leads.length : 0,
+        totalValue: leads.reduce((sum, lead) => sum + (lead.value || 0), 0)
+      },
 
-    // Lead source insights
-    const sourceBreakdown = {}
-    leads.forEach(lead => {
-      const source = lead.source || 'unknown'
-      sourceBreakdown[source] = (sourceBreakdown[source] || 0) + 1
-    })
+      // Activity Insights
+      activityInsights: {
+        totalActivities: activities.length,
+        calls: activities.filter(activity => activity.type === 'call').length,
+        emails: activities.filter(activity => activity.type === 'email').length,
+        meetings: activities.filter(activity => activity.type === 'meeting').length,
+        notes: activities.filter(activity => activity.type === 'note').length,
+        averageActivitiesPerLead: leads.length > 0 ? 
+          (activities.length / leads.length).toFixed(1) : 0
+      },
 
-    const bestSource = Object.entries(sourceBreakdown).reduce((a, b) => 
-      sourceBreakdown[a[0]] > sourceBreakdown[b[0]] ? a : b
-    )
+      // AI-Powered Insights
+      aiInsights: {
+        topPerformingSources: aiHelpers.getTopPerformingSources(leads),
+        leadQualityScore: aiHelpers.calculateLeadQualityScore(leads),
+        followUpRecommendations: aiHelpers.generateFollowUpRecommendations(leads, activities),
+        conversionPredictions: aiHelpers.generateConversionPredictions(leads),
+        engagementTrends: aiHelpers.calculateEngagementTrends(activities, days),
+        priorityLeads: aiHelpers.identifyPriorityLeads(leads, activities),
+        salesVelocity: aiHelpers.calculateSalesVelocity(leads),
+        churnRisk: aiHelpers.identifyChurnRisk(leads, activities)
+      },
 
-    if (bestSource) {
-      insights.push({
-        type: 'info',
-        title: 'Best Lead Source',
-        message: `${bestSource[0]} is your top-performing lead source with ${bestSource[1]} leads.`,
-        action: 'Focus more on this source',
-        priority: 'medium'
-      })
-    }
+      // Performance Trends
+      trends: {
+        leadGrowth: aiHelpers.calculateLeadGrowth(leads, days),
+        conversionTrends: aiHelpers.calculateConversionTrends(leads, days),
+        activityTrends: aiHelpers.calculateActivityTrends(activities, days),
+        revenueTrends: aiHelpers.calculateRevenueTrends(leads, days)
+      },
 
-    // Follow-up insights
-    const overdueFollowUps = leads.filter(lead => 
-      lead.nextFollowUpDate && new Date(lead.nextFollowUpDate) < new Date() && lead.status !== 'converted'
-    )
-
-    if (overdueFollowUps.length > 0) {
-      insights.push({
-        type: 'warning',
-        title: 'Overdue Follow-ups',
-        message: `You have ${overdueFollowUps.length} leads with overdue follow-ups.`,
-        action: 'Schedule follow-ups immediately',
-        priority: 'high'
-      })
-    }
-
-    // High-value leads insights
-    const highValueLeads = leads.filter(lead => lead.value && lead.value > 10000)
-    if (highValueLeads.length > 0) {
-      insights.push({
-        type: 'info',
-        title: 'High-Value Opportunities',
-        message: `You have ${highValueLeads.length} high-value leads (over $10,000).`,
-        action: 'Prioritize these leads',
-        priority: 'high'
-      })
-    }
-
-    // Activity insights
-    const recentActivities = activities.filter(activity => 
-      new Date(activity.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    )
-
-    if (recentActivities.length < 5) {
-      insights.push({
-        type: 'warning',
-        title: 'Low Activity Level',
-        message: 'You have completed only a few activities this week.',
-        action: 'Increase your activity level',
-        priority: 'medium'
-      })
-    }
-
-    // Lead age insights
-    const oldLeads = leads.filter(lead => {
-      const daysSinceCreated = (new Date() - new Date(lead.createdAt)) / (1000 * 60 * 60 * 24)
-      return daysSinceCreated > 30 && lead.status !== 'converted'
-    })
-
-    if (oldLeads.length > 0) {
-      insights.push({
-        type: 'warning',
-        title: 'Aging Leads',
-        message: `You have ${oldLeads.length} leads older than 30 days that haven't converted.`,
-        action: 'Review and re-engage these leads',
-        priority: 'medium'
-      })
-    }
-
-    // Recommendations
-    const recommendations = []
-
-    // Follow-up frequency recommendation
-    const avgFollowUpDays = activities
-      .filter(activity => activity.type === 'follow_up')
-      .reduce((sum, activity) => {
-        const daysDiff = (new Date(activity.scheduledDate) - new Date(activity.createdAt)) / (1000 * 60 * 60 * 24)
-        return sum + daysDiff
-      }, 0) / activities.filter(activity => activity.type === 'follow_up').length
-
-    if (avgFollowUpDays > 7) {
-      recommendations.push({
-        title: 'Improve Follow-up Speed',
-        description: 'Consider following up with leads within 24-48 hours for better conversion rates.',
-        impact: 'high'
-      })
-    }
-
-    // Lead scoring recommendation
-    const unscoredLeads = leads.filter(lead => !lead.aiScore)
-    if (unscoredLeads.length > 0) {
-      recommendations.push({
-        title: 'Implement Lead Scoring',
-        description: `You have ${unscoredLeads.length} leads without AI scores. Use AI analysis to prioritize leads.`,
-        impact: 'medium'
-      })
+      // Recommendations
+      recommendations: aiHelpers.generateRecommendations(leads, activities, days)
     }
 
     return {
       success: true,
-      data: {
-        insights,
-        recommendations,
-        summary: {
-          totalLeads: leads.length,
-          conversionRate,
-          activeLeads: leads.filter(lead => lead.status === 'active').length,
-          totalValue: leads.reduce((sum, lead) => sum + (lead.value || 0), 0)
-        }
-      }
+      data: insights
     }
-  } catch (error) {
-    console.error('AI Insights error:', error)
+  } catch (error: any) {
     throw createError({
-      statusCode: 500,
-      statusMessage: 'Internal server error'
+      statusCode: error.statusCode || 500,
+      statusMessage: error.statusMessage || 'Internal server error'
     })
   }
 })

@@ -1,46 +1,25 @@
 import connectDB from '../../utils/mongodb'
 import User from '../../models/User'
+import { hasPermission } from '../../utils/rbac'
 
 export default defineEventHandler(async (event) => {
   try {
     await connectDB()
     
-    // Get token from Authorization header
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Access token required'
-      })
-    }
-    
-    const token = authHeader.substring(7)
-    
-    // Verify JWT token
-    const jwt = await import('../../utils/jwt')
-    const decoded = jwt.verifyToken(token)
-    
-    if (!decoded) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid token'
-      })
-    }
-    
-    // Get user from database
-    const currentUser = await User.findById(decoded.userId).select('-password')
+    // Get user from auth middleware context
+    const currentUser = event.context.user
     if (!currentUser) {
       throw createError({
         statusCode: 401,
-        statusMessage: 'User not found'
+        statusMessage: 'Authentication required'
       })
     }
 
-    // Check if user has admin role
-    if (currentUser.role !== 'admin') {
+    // Check if user has permission to read users
+    if (!hasPermission(currentUser.role, 'users', 'read')) {
       throw createError({
         statusCode: 403,
-        statusMessage: 'Forbidden - Admin access required'
+        statusMessage: 'Forbidden - Insufficient permissions'
       })
     }
 
@@ -89,12 +68,30 @@ export default defineEventHandler(async (event) => {
           active: { $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] } },
           inactive: { $sum: { $cond: [{ $eq: ['$status', 'inactive'] }, 1, 0] } },
           admins: { $sum: { $cond: [{ $eq: ['$role', 'admin'] }, 1, 0] } },
-          users: { $sum: { $cond: [{ $eq: ['$role', 'user'] }, 1, 0] } }
+          sales_managers: { $sum: { $cond: [{ $eq: ['$role', 'sales_manager'] }, 1, 0] } },
+          account_managers: { $sum: { $cond: [{ $eq: ['$role', 'account_manager'] }, 1, 0] } },
+          sales_reps: { $sum: { $cond: [{ $eq: ['$role', 'sales_rep'] }, 1, 0] } },
+          customer_success: { $sum: { $cond: [{ $eq: ['$role', 'customer_success'] }, 1, 0] } },
+          marketing: { $sum: { $cond: [{ $eq: ['$role', 'marketing'] }, 1, 0] } },
+          support: { $sum: { $cond: [{ $eq: ['$role', 'support'] }, 1, 0] } },
+          viewers: { $sum: { $cond: [{ $eq: ['$role', 'viewer'] }, 1, 0] } }
         }
       }
     ])
 
-    const summary = stats[0] || { total: 0, active: 0, inactive: 0, admins: 0, users: 0 }
+    const summary = stats[0] || { 
+      total: 0, 
+      active: 0, 
+      inactive: 0, 
+      admins: 0, 
+      sales_managers: 0, 
+      account_managers: 0, 
+      sales_reps: 0, 
+      customer_success: 0, 
+      marketing: 0, 
+      support: 0, 
+      viewers: 0 
+    }
 
     return {
       success: true,

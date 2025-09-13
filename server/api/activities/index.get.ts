@@ -1,123 +1,182 @@
 import connectDB from '../../utils/mongodb'
 import Activity from '../../models/Activity'
+import Lead from '../../models/Lead'
+import User from '../../models/User'
 
 export default defineEventHandler(async (event) => {
   try {
     await connectDB()
-    
-    // Get token from Authorization header
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Access token required'
-      })
-    }
-    
-    const token = authHeader.substring(7)
-    
-    // Verify JWT token
-    const jwt = await import('../../utils/jwt')
-    const decoded = jwt.verifyToken(token)
-    
-    if (!decoded) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid token'
-      })
-    }
-    
-    const userId = decoded.userId
 
+    const user = event.context.user
+    if (!user) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Authentication required'
+      })
+    }
+
+    // Get query parameters
     const query = getQuery(event)
-    const { 
-      page = 1, 
-      limit = 10, 
-      type, 
-      status, 
+    const {
+      page = '1',
+      limit = '10',
+      type,
+      priority,
+      status,
       leadId,
-      startDate,
-      endDate 
+      assignedTo,
+      search,
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
     } = query
 
     // Build filter object
-    const filter: any = { 
-      $or: [
-        { createdBy: userId },
-        { assignedTo: userId }
+    const filter: any = {}
+
+    // Filter by type
+    if (type && type !== 'all') {
+      filter.type = type
+    }
+
+    // Filter by priority
+    if (priority && priority !== 'all') {
+      filter.priority = priority
+    }
+
+    // Filter by completion status
+    if (status === 'completed') {
+      filter.isCompleted = true
+    } else if (status === 'pending') {
+      filter.isCompleted = false
+    }
+
+    // Filter by lead
+    if (leadId) {
+      filter.leadId = leadId
+    }
+
+    // Filter by assigned user
+    if (assignedTo) {
+      filter.assignedTo = assignedTo
+    }
+
+    // Search filter
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
       ]
     }
-    
-    if (type) filter.type = type
-    if (status) filter.status = status
-    if (leadId) filter.leadId = leadId
-    
-    if (startDate || endDate) {
-      filter.createdAt = {}
-      if (startDate) filter.createdAt.$gte = new Date(startDate as string)
-      if (endDate) filter.createdAt.$lte = new Date(endDate as string)
-    }
 
-    // Calculate pagination
-    const skip = (Number(page) - 1) * Number(limit)
+    // Pagination
+    const pageNum = parseInt(page as string)
+    const limitNum = parseInt(limit as string)
+    const skip = (pageNum - 1) * limitNum
 
-    // Get activities with pagination
+    // Sort options
+    const sortOptions: any = {}
+    sortOptions[sortBy as string] = sortOrder === 'asc' ? 1 : -1
+
+    // Get activities with populated fields
     const activities = await Activity.find(filter)
       .populate('leadId', 'firstName lastName company email')
-      .sort({ createdAt: -1 })
+      .populate('createdBy', 'firstName lastName email')
+      .populate('assignedTo', 'firstName lastName email')
+      .sort(sortOptions)
       .skip(skip)
-      .limit(Number(limit))
+      .limit(limitNum)
+      .lean()
 
     // Get total count for pagination
     const total = await Activity.countDocuments(filter)
 
-    // Get summary statistics
-    const stats = await Activity.aggregate([
-      { $match: { userId } },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
-          pending: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } },
-          overdue: {
-            $sum: {
-              $cond: [
-                {
-                  $and: [
-                    { $eq: ['$status', 'pending'] },
-                    { $lt: ['$scheduledDate', new Date()] }
-                  ]
-                },
-                1,
-                0
-              ]
-            }
-          }
-        }
-      }
-    ])
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / limitNum)
+    const hasNextPage = pageNum < totalPages
+    const hasPrevPage = pageNum > 1
 
-    const summary = stats[0] || { total: 0, completed: 0, pending: 0, overdue: 0 }
+    // Get activity statistics
+    const stats = await getActivityStats(user._id)
 
     return {
       success: true,
-      data: {
-        activities,
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total,
-          pages: Math.ceil(total / Number(limit))
-        },
-        summary
-      }
+      data: activities,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages,
+        hasNextPage,
+        hasPrevPage
+      },
+      stats
     }
-  } catch (error) {
-    console.error('Activities error:', error)
+  } catch (error: any) {
     throw createError({
-      statusCode: 500,
-      statusMessage: 'Internal server error'
+      statusCode: error.statusCode || 500,
+      statusMessage: error.statusMessage || 'Internal server error'
     })
   }
 })
+
+// Helper function to get activity statistics
+async function getActivityStats(userId: string) {
+  const today = new Date()
+  const startOfDay = new Date(today.setHours(0, 0, 0, 0))
+  const endOfDay = new Date(today.setHours(23, 59, 59, 999))
+
+  const [
+    totalActivities,
+    completedToday,
+    pendingActivities,
+    overdueActivities,
+    activitiesByType,
+    activitiesByPriority
+  ] = await Promise.all([
+    // Total activities
+    Activity.countDocuments({ createdBy: userId }),
+    
+    // Completed today
+    Activity.countDocuments({
+      createdBy: userId,
+      isCompleted: true,
+      completedAt: { $gte: startOfDay, $lte: endOfDay }
+    }),
+    
+    // Pending activities
+    Activity.countDocuments({
+      createdBy: userId,
+      isCompleted: false
+    }),
+    
+    // Overdue activities
+    Activity.countDocuments({
+      createdBy: userId,
+      isCompleted: false,
+      dueDate: { $lt: new Date() }
+    }),
+    
+    // Activities by type
+    Activity.aggregate([
+      { $match: { createdBy: userId } },
+      { $group: { _id: '$type', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]),
+    
+    // Activities by priority
+    Activity.aggregate([
+      { $match: { createdBy: userId } },
+      { $group: { _id: '$priority', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ])
+  ])
+
+  return {
+    totalActivities,
+    completedToday,
+    pendingActivities,
+    overdueActivities,
+    activitiesByType,
+    activitiesByPriority
+  }
+}

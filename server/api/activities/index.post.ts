@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
       metadata = {}
     } = body
 
-    // Validate required fields
+    // Validation
     if (!type || !title || !description || !leadId) {
       throw createError({
         statusCode: 400,
@@ -34,7 +34,25 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Verify lead exists
+    // Validate activity type
+    const validTypes = ['call', 'email', 'meeting', 'note', 'task', 'status_change', 'file_upload', 'ai_insight']
+    if (!validTypes.includes(type)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid activity type'
+      })
+    }
+
+    // Validate priority
+    const validPriorities = ['low', 'medium', 'high', 'urgent']
+    if (!validPriorities.includes(priority)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid priority level'
+      })
+    }
+
+    // Check if lead exists
     const lead = await Lead.findById(leadId)
     if (!lead) {
       throw createError({
@@ -43,7 +61,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Create new activity
+    // Create activity
     const activity = new Activity({
       type,
       title,
@@ -53,27 +71,23 @@ export default defineEventHandler(async (event) => {
       assignedTo: assignedTo || user._id,
       dueDate: dueDate ? new Date(dueDate) : undefined,
       priority,
-      metadata
+      metadata,
+      isCompleted: false
     })
 
     await activity.save()
 
-    // Update lead's next follow-up date if this is a follow-up activity
-    if (type === 'call' || type === 'meeting' || type === 'email') {
-      if (dueDate) {
-        lead.nextFollowUpDate = new Date(dueDate)
-        await lead.save()
-      }
-    }
-
-    // Populate the activity with user details
-    await activity.populate('createdBy', 'firstName lastName email')
-    await activity.populate('assignedTo', 'firstName lastName email')
+    // Populate the activity with related data
+    await activity.populate([
+      { path: 'leadId', select: 'firstName lastName company email' },
+      { path: 'createdBy', select: 'firstName lastName email' },
+      { path: 'assignedTo', select: 'firstName lastName email' }
+    ])
 
     return {
       success: true,
-      data: activity,
-      message: 'Activity created successfully'
+      message: 'Activity created successfully',
+      data: activity
     }
   } catch (error: any) {
     throw createError({

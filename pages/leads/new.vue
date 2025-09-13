@@ -515,8 +515,11 @@ const createLead = async () => {
     }
 
     // Make API call
-    const response = await $fetch('/api/leads', {
-      method: 'POST',
+    const url = isEditMode.value ? `/api/leads/${route.query.edit}` : '/api/leads'
+    const method = isEditMode.value ? 'PUT' : 'POST'
+    
+    const response = await $fetch(url, {
+      method: method,
       headers: {
         'Authorization': `Bearer ${token.value}`
       },

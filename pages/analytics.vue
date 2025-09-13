@@ -3,83 +3,151 @@
     <div class="container mx-auto px-4 py-8">
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
-        <p class="text-gray-600">Track your CRM performance and insights</p>
+        <p class="text-gray-600">Comprehensive insights into your CRM performance</p>
       </div>
 
-      <!-- Stats Grid -->
-      <div class="stats-grid mb-8">
-        <div class="stat-card">
-          <div class="flex items-center">
-            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
-              <Icon name="heroicons:users" class="w-6 h-6" />
-            </div>
-            <div class="ml-4">
-              <p class="stat-label">Total Leads</p>
-              <p class="stat-value">{{ stats.totalLeads || 0 }}</p>
-            </div>
-          </div>
-        </div>
+      <!-- Loading State -->
+      <div v-if="loading" class="flex justify-center py-12">
+        <div class="loading-spinner"></div>
+      </div>
 
-        <div class="stat-card">
-          <div class="flex items-center">
-            <div class="p-3 rounded-full bg-green-100 text-green-600">
-              <Icon name="heroicons:check-circle" class="w-6 h-6" />
-            </div>
-            <div class="ml-4">
-              <p class="stat-label">Converted</p>
-              <p class="stat-value">{{ stats.convertedLeads || 0 }}</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="flex items-center">
-            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
-              <Icon name="heroicons:clock" class="w-6 h-6" />
-            </div>
-            <div class="ml-4">
-              <p class="stat-label">In Progress</p>
-              <p class="stat-value">{{ stats.inProgressLeads || 0 }}</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="flex items-center">
-            <div class="p-3 rounded-full bg-purple-100 text-purple-600">
-              <Icon name="heroicons:currency-dollar" class="w-6 h-6" />
-            </div>
-            <div class="ml-4">
-              <p class="stat-label">Total Value</p>
-              <p class="stat-value">${{ stats.totalValue || 0 }}</p>
-            </div>
-          </div>
+      <!-- Error State -->
+      <div v-else-if="error" class="card bg-red-50 border-red-200">
+        <div class="card-body text-center">
+          <Icon name="heroicons:exclamation-triangle" class="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h3 class="text-lg font-semibold text-red-900 mb-2">Error Loading Analytics</h3>
+          <p class="text-red-700 mb-4">{{ error }}</p>
+          <button @click="loadAnalytics" class="btn btn-primary">
+            Try Again
+          </button>
         </div>
       </div>
 
-      <!-- Charts Section -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div class="card">
-          <div class="card-header">
-            <h3 class="text-lg font-semibold text-gray-900">Lead Sources</h3>
-          </div>
-          <div class="card-body">
-            <div class="space-y-4">
-              <div v-for="source in leadSources" :key="source.name" class="flex items-center justify-between">
-                <div class="flex items-center">
-                  <div class="w-4 h-4 rounded-full mr-3" :style="{ backgroundColor: source.color }"></div>
-                  <span class="text-sm font-medium text-gray-900">{{ source.name }}</span>
+      <!-- Main Content -->
+      <div v-else-if="analyticsData" class="space-y-8">
+        <!-- Overview Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="card">
+            <div class="card-body">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Icon name="heroicons:users" class="w-5 h-5 text-blue-600" />
+                  </div>
                 </div>
-                <div class="flex items-center">
-                  <span class="text-sm text-gray-600 mr-2">{{ source.count }}</span>
-                  <div class="w-20 bg-gray-200 rounded-full h-2">
-                    <div 
-                      class="h-2 rounded-full" 
-                      :style="{ 
-                        width: `${(source.count / Math.max(...leadSources.map(s => s.count))) * 100}%`,
-                        backgroundColor: source.color 
-                      }"
-                    ></div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-500">Total Leads</p>
+                  <p class="text-2xl font-semibold text-gray-900">{{ analyticsData.overview.totalLeads }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <Icon name="heroicons:check-circle" class="w-5 h-5 text-green-600" />
+                  </div>
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-500">Conversion Rate</p>
+                  <p class="text-2xl font-semibold text-gray-900">{{ analyticsData.overview.conversionRate }}%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                    <Icon name="heroicons:currency-dollar" class="w-5 h-5 text-purple-600" />
+                  </div>
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-500">Total Revenue</p>
+                  <p class="text-2xl font-semibold text-gray-900">{{ formatCurrency(analyticsData.overview.totalRevenue) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <Icon name="heroicons:chart-bar" class="w-5 h-5 text-yellow-600" />
+                  </div>
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-500">Avg. Deal Size</p>
+                  <p class="text-2xl font-semibold text-gray-900">{{ formatCurrency(analyticsData.overview.averageDealSize) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lead Status Distribution -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                <Icon name="heroicons:chart-pie" class="w-5 h-5 mr-2 text-blue-600" />
+                Lead Status Distribution
+              </h3>
+            </div>
+            <div class="card-body">
+              <div class="space-y-4">
+                <div v-for="(count, status) in leadStatusDistribution" :key="status" 
+                     class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    <div class="w-3 h-3 rounded-full mr-3" :class="getStatusColor(status)"></div>
+                    <span class="text-sm font-medium text-gray-900 capitalize">{{ status.replace('_', ' ') }}</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="text-sm font-medium text-gray-900">{{ count }}</span>
+                    <div class="w-16 bg-gray-200 rounded-full h-2 ml-3">
+                      <div 
+                        class="h-2 rounded-full"
+                        :class="getStatusColor(status)"
+                        :style="{ width: `${(count / totalLeads) * 100}%` }"
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                <Icon name="heroicons:chart-bar" class="w-5 h-5 mr-2 text-green-600" />
+                Lead Priority Distribution
+              </h3>
+            </div>
+            <div class="card-body">
+              <div class="space-y-4">
+                <div v-for="(count, priority) in leadPriorityDistribution" :key="priority" 
+                     class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    <div class="w-3 h-3 rounded-full mr-3" :class="getPriorityColor(priority)"></div>
+                    <span class="text-sm font-medium text-gray-900 capitalize">{{ priority }}</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="text-sm font-medium text-gray-900">{{ count }}</span>
+                    <div class="w-16 bg-gray-200 rounded-full h-2 ml-3">
+                      <div 
+                        class="h-2 rounded-full"
+                        :class="getPriorityColor(priority)"
+                        :style="{ width: `${(count / totalLeads) * 100}%` }"
+                      ></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -87,46 +155,149 @@
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-header">
-            <h3 class="text-lg font-semibold text-gray-900">Conversion Rate</h3>
-          </div>
-          <div class="card-body">
-            <div class="text-center">
-              <div class="text-4xl font-bold text-blue-600 mb-2">
-                {{ conversionRate }}%
+        <!-- Source Performance & Activity Breakdown -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                <Icon name="heroicons:chart-bar" class="w-5 h-5 mr-2 text-purple-600" />
+                Source Performance
+              </h3>
+            </div>
+            <div class="card-body">
+              <div class="space-y-4">
+                <div v-for="source in sourcePerformance" :key="source.source" 
+                     class="p-3 bg-gray-50 rounded-lg">
+                  <div class="flex items-center justify-between mb-2">
+                    <h4 class="font-medium text-gray-900 capitalize">{{ source.source }}</h4>
+                    <span class="text-sm text-gray-600">{{ source.conversionRate }}% conversion</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span class="text-gray-600">Total:</span>
+                      <span class="font-medium ml-1">{{ source.total }}</span>
+                    </div>
+                    <div>
+                      <span class="text-gray-600">Converted:</span>
+                      <span class="font-medium ml-1">{{ source.converted }}</span>
+                    </div>
+                    <div>
+                      <span class="text-gray-600">Value:</span>
+                      <span class="font-medium ml-1">{{ formatCurrency(source.totalValue) }}</span>
+                    </div>
+                    <div>
+                      <span class="text-gray-600">Avg. Value:</span>
+                      <span class="font-medium ml-1">{{ formatCurrency(source.averageValue) }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <p class="text-sm text-gray-600">Overall conversion rate</p>
-              <div class="mt-4">
-                <div class="w-full bg-gray-200 rounded-full h-3">
-                  <div 
-                    class="bg-blue-600 h-3 rounded-full transition-all duration-500"
-                    :style="{ width: `${conversionRate}%` }"
-                  ></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                <Icon name="heroicons:clock" class="w-5 h-5 mr-2 text-orange-600" />
+                Activity Breakdown
+              </h3>
+            </div>
+            <div class="card-body">
+              <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="text-center p-4 bg-blue-50 rounded-lg">
+                    <p class="text-2xl font-bold text-blue-600">{{ activityBreakdown.calls }}</p>
+                    <p class="text-sm text-gray-600">Calls</p>
+                  </div>
+                  <div class="text-center p-4 bg-green-50 rounded-lg">
+                    <p class="text-2xl font-bold text-green-600">{{ activityBreakdown.emails }}</p>
+                    <p class="text-sm text-gray-600">Emails</p>
+                  </div>
+                  <div class="text-center p-4 bg-purple-50 rounded-lg">
+                    <p class="text-2xl font-bold text-purple-600">{{ activityBreakdown.meetings }}</p>
+                    <p class="text-sm text-gray-600">Meetings</p>
+                  </div>
+                  <div class="text-center p-4 bg-yellow-50 rounded-lg">
+                    <p class="text-2xl font-bold text-yellow-600">{{ activityBreakdown.notes }}</p>
+                    <p class="text-sm text-gray-600">Notes</p>
+                  </div>
+                </div>
+                <div class="text-center p-4 bg-gray-50 rounded-lg">
+                  <p class="text-lg font-semibold text-gray-900">{{ activityBreakdown.totalActivities }}</p>
+                  <p class="text-sm text-gray-600">Total Activities</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Recent Activities -->
-      <div class="card">
-        <div class="card-header">
-          <h3 class="text-lg font-semibold text-gray-900">Recent Activities</h3>
+        <!-- User Performance -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+              <Icon name="heroicons:user-group" class="w-5 h-5 mr-2 text-indigo-600" />
+              User Performance
+            </h3>
+          </div>
+          <div class="card-body">
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leads</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Converted</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conversion Rate</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Value</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg. Deal Size</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activities</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr v-for="user in userPerformance" :key="user.userId">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div class="text-sm font-medium text-gray-900">{{ user.name }}</div>
+                        <div class="text-sm text-gray-500">{{ user.email }}</div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ user.totalLeads }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ user.convertedLeads }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ user.conversionRate }}%</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatCurrency(user.totalValue) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatCurrency(user.averageDealSize) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ user.totalActivities }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
-          <div class="space-y-4">
-            <div v-for="activity in recentActivities" :key="activity.id" class="flex items-center space-x-4">
-              <div class="flex-shrink-0">
-                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Icon :name="activity.icon" class="w-4 h-4 text-blue-600" />
-                </div>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-900">{{ activity.description }}</p>
-                <p class="text-sm text-gray-500">{{ activity.time }}</p>
-              </div>
+
+        <!-- Pipeline Health -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="card">
+            <div class="card-body text-center">
+              <p class="text-2xl font-bold text-blue-600">{{ formatCurrency(pipelineHealth.pipelineValue) }}</p>
+              <p class="text-sm text-gray-600">Pipeline Value</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body text-center">
+              <p class="text-2xl font-bold text-green-600">{{ pipelineHealth.averageDealCycle }}</p>
+              <p class="text-sm text-gray-600">Avg. Deal Cycle (days)</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body text-center">
+              <p class="text-2xl font-bold text-purple-600">{{ pipelineHealth.winRate }}%</p>
+              <p class="text-sm text-gray-600">Win Rate</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body text-center">
+              <p class="text-2xl font-bold text-red-600">{{ pipelineHealth.lossRate }}%</p>
+              <p class="text-sm text-gray-600">Loss Rate</p>
             </div>
           </div>
         </div>
@@ -136,42 +307,84 @@
 </template>
 
 <script setup>
+// Use settings composable
+const { formatCurrency } = useSettings()
+
 // Reactive data
 const loading = ref(true)
 const error = ref('')
-const analytics = ref(null)
+const analyticsData = ref(null)
 
-// Computed
-const stats = computed(() => analytics.value?.metrics || {
-  totalLeads: 0,
-  convertedLeads: 0,
-  inProgressLeads: 0,
-  totalValue: 0
+// Computed properties
+const leadStatusDistribution = computed(() => {
+  if (!analyticsData.value?.leadStatusDistribution) return {}
+  return analyticsData.value.leadStatusDistribution
 })
 
-const leadSources = computed(() => {
-  if (!analytics.value?.leadSources) return []
-  return analytics.value.leadSources.map(source => ({
-    name: source.source.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    count: source.count,
-    color: getSourceColor(source.source)
-  }))
+const leadPriorityDistribution = computed(() => {
+  if (!analyticsData.value?.leadPriorityDistribution) return {}
+  return analyticsData.value.leadPriorityDistribution
 })
 
-const recentActivities = computed(() => {
-  if (!analytics.value?.recentActivities) return []
-  return analytics.value.recentActivities.map(activity => ({
-    id: activity._id,
-    description: activity.title,
-    time: formatDate(activity.createdAt),
-    icon: getActivityIcon(activity.type)
-  }))
+const sourcePerformance = computed(() => {
+  if (!analyticsData.value?.sourcePerformance) return []
+  return analyticsData.value.sourcePerformance
 })
 
-const conversionRate = computed(() => {
-  if (stats.value.totalLeads === 0) return 0
-  return Math.round((stats.value.convertedLeads / stats.value.totalLeads) * 100)
+const activityBreakdown = computed(() => {
+  if (!analyticsData.value?.activityBreakdown) return {
+    calls: 0,
+    emails: 0,
+    meetings: 0,
+    notes: 0,
+    totalActivities: 0
+  }
+  return analyticsData.value.activityBreakdown
 })
+
+const userPerformance = computed(() => {
+  if (!analyticsData.value?.userPerformance) return []
+  return analyticsData.value.userPerformance
+})
+
+const pipelineHealth = computed(() => {
+  if (!analyticsData.value?.pipelineHealth) return {
+    pipelineValue: 0,
+    averageDealCycle: 0,
+    winRate: 0,
+    lossRate: 0
+  }
+  return analyticsData.value.pipelineHealth
+})
+
+const totalLeads = computed(() => {
+  if (!analyticsData.value?.overview?.totalLeads) return 1
+  return analyticsData.value.overview.totalLeads
+})
+
+// Helper functions
+const getStatusColor = (status) => {
+  const colors = {
+    'new': 'bg-blue-500',
+    'contacted': 'bg-yellow-500',
+    'qualified': 'bg-green-500',
+    'proposal': 'bg-purple-500',
+    'negotiation': 'bg-orange-500',
+    'closed_won': 'bg-green-600',
+    'closed_lost': 'bg-red-500'
+  }
+  return colors[status] || 'bg-gray-500'
+}
+
+const getPriorityColor = (priority) => {
+  const colors = {
+    'low': 'bg-gray-500',
+    'medium': 'bg-yellow-500',
+    'high': 'bg-orange-500',
+    'urgent': 'bg-red-500'
+  }
+  return colors[priority] || 'bg-gray-500'
+}
 
 // Methods
 const loadAnalytics = async () => {
@@ -197,55 +410,16 @@ const loadAnalytics = async () => {
     })
     
     if (response.success) {
-      analytics.value = response.data
+      analyticsData.value = response.data
     } else {
-      throw new Error('Failed to load analytics data')
+      throw new Error('Failed to load analytics')
     }
   } catch (err) {
     console.error('Error loading analytics:', err)
-    error.value = err.message || 'Failed to load analytics data'
+    error.value = err.data?.message || err.message || 'Failed to load analytics'
   } finally {
     loading.value = false
   }
-}
-
-const getSourceColor = (source) => {
-  const colors = {
-    website: '#3B82F6',
-    social_media: '#10B981',
-    email: '#F59E0B',
-    referral: '#8B5CF6',
-    cold_call: '#EF4444',
-    event: '#06B6D4',
-    other: '#6B7280'
-  }
-  return colors[source] || '#6B7280'
-}
-
-const getActivityIcon = (type) => {
-  const icons = {
-    follow_up: 'heroicons:phone',
-    call: 'heroicons:phone',
-    email: 'heroicons:envelope',
-    meeting: 'heroicons:calendar',
-    note: 'heroicons:document-text',
-    task: 'heroicons:check-circle'
-  }
-  return icons[type] || 'heroicons:clock'
-}
-
-const formatDate = (date) => {
-  const now = new Date()
-  const activityDate = new Date(date)
-  const diffInHours = Math.floor((now - activityDate) / (1000 * 60 * 60))
-  
-  if (diffInHours < 1) return 'Just now'
-  if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`
-  
-  const diffInDays = Math.floor(diffInHours / 24)
-  if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`
-  
-  return activityDate.toLocaleDateString()
 }
 
 // Lifecycle

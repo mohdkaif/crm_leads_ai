@@ -128,15 +128,41 @@ export const useAuth = () => {
     return roles.includes(user.value?.role)
   }
 
+  const isAdmin = computed(() => user.value?.role === 'admin')
+
+  const hasPermission = (resource: string, action: string) => {
+    // Admin users have full access to everything
+    if (user.value?.role === 'admin') {
+      return true
+    }
+    
+    // For non-admin users, you can implement more granular permission checks here
+    // For now, we'll use role-based checks
+    const role = user.value?.role
+    
+    switch (role) {
+      case 'manager':
+        return ['leads', 'users', 'analytics', 'activities'].includes(resource)
+      case 'sales':
+        return ['leads', 'activities'].includes(resource) && action !== 'delete'
+      case 'viewer':
+        return ['leads', 'activities', 'analytics'].includes(resource) && action === 'read'
+      default:
+        return false
+    }
+  }
+
   return {
     user: readonly(user),
     loading: readonly(loading),
     isAuthenticated,
+    isAdmin,
     login,
     register,
     logout,
     fetchUser,
     hasRole,
-    hasAnyRole
+    hasAnyRole,
+    hasPermission
   }
 }

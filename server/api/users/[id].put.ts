@@ -1,6 +1,7 @@
 import connectDB from '../../utils/mongodb'
 import User from '../../models/User'
 import bcrypt from 'bcryptjs'
+import { hasPermission } from '../../utils/rbac'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -37,11 +38,11 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Check if user has admin role
-    if (currentUser.role !== 'admin') {
+    // Check if user has permission to update users
+    if (!hasPermission(currentUser.role, 'users', 'update')) {
       throw createError({
         statusCode: 403,
-        statusMessage: 'Forbidden - Admin access required'
+        statusMessage: 'Forbidden - Insufficient permissions'
       })
     }
 
@@ -63,6 +64,34 @@ export default defineEventHandler(async (event) => {
         statusCode: 404,
         statusMessage: 'User not found'
       })
+    }
+
+    // Check if current user can update this specific user
+    // Sales managers can only update sales team users
+    if (currentUser.role === 'sales_manager' && !['sales_rep', 'account_manager', 'customer_success', 'viewer'].includes(userToUpdate.role)) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Sales managers can only update sales team users'
+      })
+    }
+
+    // Validate role if being changed
+    if (role) {
+      const validRoles = ['admin', 'sales_manager', 'account_manager', 'sales_rep', 'customer_success', 'marketing', 'support', 'viewer']
+      if (!validRoles.includes(role)) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Invalid role. Must be one of: admin, sales_manager, account_manager, sales_rep, customer_success, marketing, support, viewer'
+        })
+      }
+
+      // Check if user can assign this role
+      if (currentUser.role === 'sales_manager' && role === 'admin') {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Sales managers cannot assign admin role'
+        })
+      }
     }
 
     // Check if email is being changed and if it's already taken

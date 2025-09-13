@@ -27,7 +27,7 @@
       <!-- Users Content -->
       <div v-else>
         <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div class="card">
             <div class="card-body">
               <div class="flex items-center">
@@ -79,6 +79,107 @@
                 <div class="ml-4">
                   <p class="text-sm font-medium text-gray-600">Admins</p>
                   <p class="text-2xl font-bold text-gray-900">{{ summary.admins }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Role Distribution Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div class="card">
+            <div class="card-body">
+              <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                  <Icon name="heroicons:user-group" class="w-6 h-6" />
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-600">Sales Managers</p>
+                  <p class="text-2xl font-bold text-gray-900">{{ summary.sales_managers }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                  <Icon name="heroicons:briefcase" class="w-6 h-6" />
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-600">Account Managers</p>
+                  <p class="text-2xl font-bold text-gray-900">{{ summary.account_managers }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                  <Icon name="heroicons:chart-bar" class="w-6 h-6" />
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-600">Sales Reps</p>
+                  <p class="text-2xl font-bold text-gray-900">{{ summary.sales_reps }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                  <Icon name="heroicons:heart" class="w-6 h-6" />
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-600">Customer Success</p>
+                  <p class="text-2xl font-bold text-gray-900">{{ summary.customer_success }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <div class="flex items-center">
+                <div class="p-3 rounded-full bg-pink-100 text-pink-600">
+                  <Icon name="heroicons:megaphone" class="w-6 h-6" />
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-600">Marketing</p>
+                  <p class="text-2xl font-bold text-gray-900">{{ summary.marketing }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <div class="flex items-center">
+                <div class="p-3 rounded-full bg-orange-100 text-orange-600">
+                  <Icon name="heroicons:lifebuoy" class="w-6 h-6" />
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-600">Support</p>
+                  <p class="text-2xl font-bold text-gray-900">{{ summary.support }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <div class="flex items-center">
+                <div class="p-3 rounded-full bg-gray-100 text-gray-600">
+                  <Icon name="heroicons:eye" class="w-6 h-6" />
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-600">Viewers</p>
+                  <p class="text-2xl font-bold text-gray-900">{{ summary.viewers }}</p>
                 </div>
               </div>
             </div>
@@ -213,9 +314,25 @@
                       <div>
                         <label class="form-label">Role *</label>
                         <select v-model="userForm.role" class="form-input" required>
-                          <option value="user">User</option>
+                          <option value="viewer">Viewer</option>
+                          <option value="support">Support</option>
+                          <option value="marketing">Marketing</option>
+                          <option value="customer_success">Customer Success</option>
+                          <option value="sales_rep">Sales Rep</option>
+                          <option value="account_manager">Account Manager</option>
+                          <option value="sales_manager">Sales Manager</option>
                           <option value="admin">Admin</option>
                         </select>
+                        <p class="text-xs text-gray-500 mt-1">
+                          <span v-if="userForm.role === 'admin'">Full system access</span>
+                          <span v-else-if="userForm.role === 'sales_manager'">Manage sales team and leads</span>
+                          <span v-else-if="userForm.role === 'account_manager'">Manage assigned accounts</span>
+                          <span v-else-if="userForm.role === 'sales_rep'">Manage own leads and activities</span>
+                          <span v-else-if="userForm.role === 'customer_success'">Customer success and retention</span>
+                          <span v-else-if="userForm.role === 'marketing'">Marketing campaigns and leads</span>
+                          <span v-else-if="userForm.role === 'support'">Customer support and tickets</span>
+                          <span v-else-if="userForm.role === 'viewer'">Read-only access</span>
+                        </p>
                       </div>
                       
                       <div>
@@ -335,7 +452,19 @@
 const loading = ref(true)
 const error = ref('')
 const users = ref([])
-const summary = ref({ total: 0, active: 0, inactive: 0, admins: 0, users: 0 })
+const summary = ref({ 
+  total: 0, 
+  active: 0, 
+  inactive: 0, 
+  admins: 0, 
+  sales_managers: 0, 
+  account_managers: 0, 
+  sales_reps: 0, 
+  customer_success: 0, 
+  marketing: 0, 
+  support: 0, 
+  viewers: 0 
+})
 const pagination = ref({ page: 1, limit: 10, total: 0, pages: 0 })
 
 // Modal states
@@ -351,7 +480,7 @@ const userForm = ref({
   lastName: '',
   email: '',
   phone: '',
-  role: 'user',
+  role: 'viewer',
   status: 'active',
   department: '',
   jobTitle: '',
@@ -417,7 +546,13 @@ const loadUsers = async () => {
 const getRoleBadgeClass = (role) => {
   const classes = {
     admin: 'bg-red-100 text-red-800',
-    user: 'bg-green-100 text-green-800'
+    sales_manager: 'bg-purple-100 text-purple-800',
+    account_manager: 'bg-blue-100 text-blue-800',
+    sales_rep: 'bg-green-100 text-green-800',
+    customer_success: 'bg-yellow-100 text-yellow-800',
+    marketing: 'bg-pink-100 text-pink-800',
+    support: 'bg-orange-100 text-orange-800',
+    viewer: 'bg-gray-100 text-gray-800'
   }
   return classes[role] || 'bg-gray-100 text-gray-800'
 }
@@ -450,7 +585,7 @@ const openAddModal = () => {
     lastName: '',
     email: '',
     phone: '',
-    role: 'user',
+    role: 'viewer',
     status: 'active',
     department: '',
     jobTitle: '',
@@ -488,7 +623,7 @@ const closeModal = () => {
     lastName: '',
     email: '',
     phone: '',
-    role: 'user',
+    role: 'viewer',
     status: 'active',
     department: '',
     jobTitle: '',

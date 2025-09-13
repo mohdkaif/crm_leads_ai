@@ -34,58 +34,10 @@
             </div>
           </div>
           
-          <div class="flex flex-col sm:flex-row gap-4">
-            <NuxtLink 
-              to="/login" 
-              class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors text-center"
-            >
-              🔐 Login
-            </NuxtLink>
-            <NuxtLink 
-              to="/register" 
-              class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors text-center"
-            >
-              ✨ Register
-            </NuxtLink>
-            <button 
-              @click="testAPI" 
-              class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
-            >
-              🧪 Test API
-            </button>
-          </div>
+          
         </div>
         
-        <div class="bg-white rounded-lg shadow-lg p-8">
-          <h2 class="text-2xl font-semibold text-gray-800 mb-4">API Endpoints</h2>
-          <div class="space-y-2 text-sm">
-            <div class="flex items-center gap-2">
-              <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-mono">GET</span>
-              <code>/api/auth/me</code>
-              <span class="text-gray-500">- Get current user</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-mono">POST</span>
-              <code>/api/auth/login</code>
-              <span class="text-gray-500">- User login</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-mono">POST</span>
-              <code>/api/auth/register</code>
-              <span class="text-gray-500">- User registration</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-mono">GET</span>
-              <code>/api/leads</code>
-              <span class="text-gray-500">- Get all leads</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-mono">GET</span>
-              <code>/api/analytics/dashboard</code>
-              <span class="text-gray-500">- Dashboard metrics</span>
-            </div>
-          </div>
-        </div>
+        
       </div>
     </div>
   </div>
@@ -122,11 +74,12 @@ const checkAuth = async () => {
 }
 
 const testAPI = async () => {
+  const { success, error: showError } = useAlert()
   try {
     const response = await $fetch('/api/auth/me')
-    alert('API is working! Response: ' + JSON.stringify(response, null, 2))
+    await success('API is working!', 'Response: ' + JSON.stringify(response, null, 2))
   } catch (error) {
-    alert('API Error: ' + error.message)
+    await showError('API Error', error.message)
   }
 }
 

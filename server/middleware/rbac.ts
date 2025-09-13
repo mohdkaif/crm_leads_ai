@@ -24,6 +24,11 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Admin users have full access - skip all permission checks
+  if (user.role === 'admin') {
+    return
+  }
+
   const method = event.node.req.method
   const url = event.node.req.url
 
@@ -53,6 +58,14 @@ export default defineEventHandler(async (event) => {
     resource = 'activities'
   } else if (url?.startsWith('/api/settings')) {
     resource = 'settings'
+  } else if (url?.startsWith('/api/assignment-rules')) {
+    resource = 'assignment-rules'
+  } else if (url?.startsWith('/api/assignments')) {
+    resource = 'assignments'
+  } else if (url?.startsWith('/api/email')) {
+    resource = 'email'
+  } else if (url?.startsWith('/api/ai')) {
+    resource = 'ai'
   }
 
   if (resource) {

@@ -1,5 +1,6 @@
 import { verifyToken } from '../utils/jwt'
 import User from '../models/User'
+import connectDB from '../utils/mongodb'
 
 export default defineEventHandler(async (event) => {
   // Only apply auth middleware to API routes
@@ -7,8 +8,9 @@ export default defineEventHandler(async (event) => {
     return
   }
 
-  // Skip auth middleware for auth routes (login, register, forgot-password)
-  if (event.node.req.url?.startsWith('/api/auth/')) {
+  // Skip auth middleware for auth routes (login, register, forgot-password, send-2fa, verify-2fa)
+  // But include /api/auth/me which needs authentication
+  if (event.node.req.url?.startsWith('/api/auth/') && event.node.req.url !== '/api/auth/me') {
     return
   }
 
@@ -17,7 +19,10 @@ export default defineEventHandler(async (event) => {
     return
   }
 
-  const token = getCookie(event, 'auth-token') || getHeader(event, 'authorization')?.replace('Bearer ', '')
+  const cookieToken = getCookie(event, 'auth-token')
+  const headerToken = getHeader(event, 'authorization')?.replace('Bearer ', '')
+  const token = cookieToken || headerToken
+
 
   if (!token) {
     throw createError({
@@ -34,6 +39,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Ensure database connection before querying
+  await connectDB()
 
   const user = await User.findById(payload.userId).select('-password')
   if (!user || user.status !== 'active') {

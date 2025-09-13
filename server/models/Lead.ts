@@ -10,7 +10,7 @@ export interface ILead extends Document {
   jobTitle?: string
   industry?: string
   source: 'website' | 'social_media' | 'referral' | 'cold_call' | 'email' | 'event' | 'other'
-  status: 'new' | 'contacted' | 'qualified' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost'
+  status: 'new' | 'contacted' | 'qualified' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost' | 'assigned'
   priority: 'low' | 'medium' | 'high' | 'urgent'
   value?: number
   currency: string
@@ -88,7 +88,7 @@ const LeadSchema = new Schema<ILead>({
   },
   status: {
     type: String,
-    enum: ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'closed_won', 'closed_lost'],
+    enum: ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'closed_won', 'closed_lost', 'assigned'],
     default: 'new'
   },
   priority: {

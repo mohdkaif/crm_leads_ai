@@ -1,6 +1,7 @@
 import connectDB from '../../utils/mongodb'
 import User from '../../models/User'
 import { generateToken, generateRefreshToken } from '../../utils/jwt'
+import { generate2FACode, store2FACode, sendTemplateEmail } from '../../utils/email'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -39,6 +40,40 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Check if 2FA is enabled
+    const is2FAEnabled = user.settings?.security?.twoFactor || false
+    
+    if (is2FAEnabled) {
+      // Generate and send 2FA code
+      const code = generate2FACode()
+      store2FACode(email, code)
+      
+      // Send 2FA email
+      const emailResult = await sendTemplateEmail(email, 'twoFactorAuth', {
+        code,
+        name: `${user.firstName} ${user.lastName}`
+      })
+      
+      if (!emailResult.success) {
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Failed to send 2FA code'
+        })
+      }
+      
+      return {
+        success: true,
+        requires2FA: true,
+        message: '2FA code sent to your email',
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName
+        }
+      }
+    }
+
     // Update last login
     user.lastLogin = new Date()
     await user.save()
@@ -63,6 +98,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
+      requires2FA: false,
       user: {
         id: user._id,
         email: user.email,
@@ -72,7 +108,8 @@ export default defineEventHandler(async (event) => {
         avatar: user.avatar,
         phone: user.phone,
         department: user.department,
-        lastLogin: user.lastLogin
+        lastLogin: user.lastLogin,
+        settings: user.settings
       },
       token
     }
